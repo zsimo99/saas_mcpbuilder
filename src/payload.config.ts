@@ -76,33 +76,65 @@ export default buildConfig({
         tools: [
           {
             name: 'uploadMedia',
-            description: 'Upload a media file (passed directly as Base64) to Payload CMS for a specific domain.',
+            description: 'Upload a media file (using local path, base64 string, or remote image URL) to Payload CMS.',
             parameters: {
               domain: z.union([z.number(), z.string()]),
               alt: z.string(),
-              fileName: z.string(),
-              fileBase64: z.string(),
+              fileName: z.string().optional(),
+              filePath: z.string().optional(),
+              fileBase64: z.string().optional(),
+              imageUrl: z.string().optional(),
             } as any,
             handler: async (args, req) => {
               let tempFilePath: string | null = null;
+              let shouldCleanupTemp = false;
               try {
                 const domainInput = args.domain
                 const domain = typeof domainInput === 'string' ? parseInt(domainInput, 10) : (domainInput as number)
                 const alt = args.alt as string
-                const fileName = args.fileName as string
-                const fileBase64 = args.fileBase64 as string
+                const fileName = args.fileName as string | undefined
+                const filePath = args.filePath as string | undefined
+                const fileBase64 = args.fileBase64 as string | undefined
+                const imageUrl = args.imageUrl as string | undefined
 
-                // Create temp directory if it doesn't exist in workspace
-                const tempDir = path.resolve(dirname, '../.tmp');
-                if (!fs.existsSync(tempDir)) {
-                  fs.mkdirSync(tempDir, { recursive: true });
+                let targetPath = '';
+
+                if (filePath) {
+                  // Mode 1: Local file path
+                  targetPath = path.resolve(filePath);
+                  if (!fs.existsSync(targetPath)) {
+                    throw new Error(`File not found at path: ${filePath}`);
+                  }
+                } else {
+                  // We need a temp file name
+                  const resolvedFileName = fileName || 'temp_file_' + Date.now();
+
+                  // Create temp directory if it doesn't exist in workspace
+                  const tempDir = path.resolve(dirname, '../.tmp');
+                  if (!fs.existsSync(tempDir)) {
+                    fs.mkdirSync(tempDir, { recursive: true });
+                  }
+
+                  tempFilePath = path.join(tempDir, resolvedFileName);
+                  targetPath = tempFilePath;
+                  shouldCleanupTemp = true;
+
+                  if (fileBase64) {
+                    // Mode 2: Base64 data
+                    const fileBuffer = Buffer.from(fileBase64, 'base64');
+                    fs.writeFileSync(tempFilePath, fileBuffer);
+                  } else if (imageUrl) {
+                    // Mode 3: Image URL download
+                    const response = await fetch(imageUrl);
+                    if (!response.ok) {
+                      throw new Error(`Failed to download image from URL: ${response.statusText}`);
+                    }
+                    const arrayBuffer = await response.arrayBuffer();
+                    fs.writeFileSync(tempFilePath, Buffer.from(arrayBuffer));
+                  } else {
+                    throw new Error('At least one of the parameters [filePath, fileBase64, imageUrl] must be provided.');
+                  }
                 }
-
-                tempFilePath = path.join(tempDir, fileName);
-
-                // Write base64 data to temp file
-                const fileBuffer = Buffer.from(fileBase64, 'base64');
-                fs.writeFileSync(tempFilePath, fileBuffer);
 
                 // Create the media using the Local API
                 const result = await req.payload.create({
@@ -111,11 +143,11 @@ export default buildConfig({
                     alt,
                     domain,
                   },
-                  filePath: tempFilePath,
+                  filePath: targetPath,
                 });
 
                 // Cleanup temp file
-                if (fs.existsSync(tempFilePath)) {
+                if (shouldCleanupTemp && tempFilePath && fs.existsSync(tempFilePath)) {
                   fs.unlinkSync(tempFilePath);
                 }
 
@@ -135,7 +167,7 @@ export default buildConfig({
                 console.error('Error in custom uploadMedia tool:', error);
                 
                 // Cleanup temp file on error
-                if (tempFilePath && fs.existsSync(tempFilePath)) {
+                if (shouldCleanupTemp && tempFilePath && fs.existsSync(tempFilePath)) {
                   try {
                     fs.unlinkSync(tempFilePath);
                   } catch (cleanupError) {
