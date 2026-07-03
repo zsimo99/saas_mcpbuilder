@@ -339,7 +339,7 @@ export interface PayloadMcpApiKey {
   };
   'payload-mcp-tool'?: {
     /**
-     * Upload a local media file to Payload CMS for a specific domain.
+     * Upload a media file (passed directly as Base64) to Payload CMS for a specific domain.
      */
     uploadMedia?: boolean | null;
   };

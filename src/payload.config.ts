@@ -76,35 +76,33 @@ export default buildConfig({
         tools: [
           {
             name: 'uploadMedia',
-            description: 'Upload a local media file to Payload CMS for a specific domain.',
+            description: 'Upload a media file (passed directly as Base64) to Payload CMS for a specific domain.',
             parameters: {
               domain: z.union([z.number(), z.string()]),
               alt: z.string(),
-              filePath: z.string(),
+              fileName: z.string(),
+              fileBase64: z.string(),
             } as any,
             handler: async (args, req) => {
+              let tempFilePath: string | null = null;
               try {
                 const domainInput = args.domain
                 const domain = typeof domainInput === 'string' ? parseInt(domainInput, 10) : (domainInput as number)
                 const alt = args.alt as string
-                const filePath = args.filePath as string
+                const fileName = args.fileName as string
+                const fileBase64 = args.fileBase64 as string
 
-                const absolutePath = path.resolve(filePath);
-                
-                // Check if file exists
-                if (!fs.existsSync(absolutePath)) {
-                  return {
-                    content: [
-                      {
-                        type: 'text',
-                        text: JSON.stringify({
-                          success: false,
-                          error: `File not found at path: ${filePath}`,
-                        }),
-                      },
-                    ],
-                  }
+                // Create temp directory if it doesn't exist in workspace
+                const tempDir = path.resolve(dirname, '../.tmp');
+                if (!fs.existsSync(tempDir)) {
+                  fs.mkdirSync(tempDir, { recursive: true });
                 }
+
+                tempFilePath = path.join(tempDir, fileName);
+
+                // Write base64 data to temp file
+                const fileBuffer = Buffer.from(fileBase64, 'base64');
+                fs.writeFileSync(tempFilePath, fileBuffer);
 
                 // Create the media using the Local API
                 const result = await req.payload.create({
@@ -113,8 +111,13 @@ export default buildConfig({
                     alt,
                     domain,
                   },
-                  filePath: absolutePath,
+                  filePath: tempFilePath,
                 });
+
+                // Cleanup temp file
+                if (fs.existsSync(tempFilePath)) {
+                  fs.unlinkSync(tempFilePath);
+                }
 
                 return {
                   content: [
@@ -130,6 +133,16 @@ export default buildConfig({
                 }
               } catch (error: any) {
                 console.error('Error in custom uploadMedia tool:', error);
+                
+                // Cleanup temp file on error
+                if (tempFilePath && fs.existsSync(tempFilePath)) {
+                  try {
+                    fs.unlinkSync(tempFilePath);
+                  } catch (cleanupError) {
+                    console.error('Failed to cleanup temp file:', cleanupError);
+                  }
+                }
+
                 return {
                   content: [
                     {
