@@ -1,3 +1,5 @@
+import fs from 'fs'
+import { z } from 'zod'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
@@ -69,7 +71,82 @@ export default buildConfig({
           },
           description: 'Uploaded images, assets, and graphics used inside page blocks.',
         },
-      }, overrideAuth: async (req, getDefaultMcpAccessSettings) => {
+      },
+      mcp: {
+        tools: [
+          {
+            name: 'createMedia',
+            description: 'Upload a local media file to Payload CMS for a specific domain.',
+            parameters: {
+              domain: z.union([z.number(), z.string()]),
+              alt: z.string(),
+              filePath: z.string(),
+            } as any,
+            handler: async (args, req) => {
+              try {
+                const domainInput = args.domain
+                const domain = typeof domainInput === 'string' ? parseInt(domainInput, 10) : (domainInput as number)
+                const alt = args.alt as string
+                const filePath = args.filePath as string
+
+                const absolutePath = path.resolve(filePath);
+                
+                // Check if file exists
+                if (!fs.existsSync(absolutePath)) {
+                  return {
+                    content: [
+                      {
+                        type: 'text',
+                        text: JSON.stringify({
+                          success: false,
+                          error: `File not found at path: ${filePath}`,
+                        }),
+                      },
+                    ],
+                  }
+                }
+
+                // Create the media using the Local API
+                const result = await req.payload.create({
+                  collection: 'media',
+                  data: {
+                    alt,
+                    domain,
+                  },
+                  filePath: absolutePath,
+                });
+
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify({
+                        success: true,
+                        message: 'Media successfully uploaded.',
+                        media: result,
+                      }),
+                    },
+                  ],
+                }
+              } catch (error: any) {
+                console.error('Error in custom createMedia tool:', error);
+                return {
+                  content: [
+                    {
+                      type: 'text',
+                      text: JSON.stringify({
+                        success: false,
+                        error: error.message || 'An unexpected error occurred during upload.',
+                      }),
+                    },
+                  ],
+                }
+              }
+            },
+          },
+        ],
+      },
+      overrideAuth: async (req, getDefaultMcpAccessSettings) => {
         console.log("req", req)
         const url = new URL(req.url || '', 'http://localhost')
         const token = url.searchParams.get('token')
