@@ -285,6 +285,20 @@ export interface PayloadMcpApiKey {
    * The purpose of the API key.
    */
   description?: string | null;
+  domain?: {
+    /**
+     * Allow clients to find domain.
+     */
+    find?: boolean | null;
+    /**
+     * Allow clients to create domain.
+     */
+    create?: boolean | null;
+    /**
+     * Allow clients to update domain.
+     */
+    update?: boolean | null;
+  };
   headers?: {
     /**
      * Allow clients to find headers.
@@ -550,6 +564,13 @@ export interface PayloadMcpApiKeysSelect<T extends boolean = true> {
   user?: T;
   label?: T;
   description?: T;
+  domain?:
+    | T
+    | {
+        find?: T;
+        create?: T;
+        update?: T;
+      };
   headers?:
     | T
     | {

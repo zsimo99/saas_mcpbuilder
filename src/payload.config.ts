@@ -38,6 +38,14 @@ export default buildConfig({
   plugins: [
     mcpPlugin({
       collections: {
+        domain: {
+          enabled: {
+            find: true,
+            create: true,
+            update: true,
+          },
+          description: 'Collection for domains.',
+        },
         headers: {
           enabled: {
             find: true,
