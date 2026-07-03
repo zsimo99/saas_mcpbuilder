@@ -38,6 +38,14 @@ export default buildConfig({
   plugins: [
     mcpPlugin({
       collections: {
+        headers: {
+          enabled: {
+            find: true,
+            create: true,  // Allow the agent to create headers
+            update: true,
+          },
+          description: 'Collection for headers. Contains a structural blocks layout field.',
+        },
         pages: {
           enabled: {
             find: true,
@@ -53,6 +61,14 @@ export default buildConfig({
           },
           description: 'Uploaded images, assets, and graphics used inside page blocks.',
         },
+      }, overrideAuth: async (req, getDefaultMcpAccessSettings) => {
+        console.log("req", req)
+        const url = new URL(req.url || '', 'http://localhost')
+        const token = url.searchParams.get('token')
+        if (token) {
+          req.headers.set('Authorization', `Bearer ${token}`)
+        }
+        return getDefaultMcpAccessSettings()
       },
     }),
   ],
