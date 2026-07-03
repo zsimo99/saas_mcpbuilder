@@ -3,7 +3,6 @@ import type { User } from '@/payload-types'
 import { hasDomainAccess } from './Domain'
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3Client, getBucketName } from '@/utilities/s3'
-import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -13,6 +12,7 @@ const dirname = path.dirname(filename)
 const uploadToS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
   if (doc && doc.domain && doc.filename && req.payload) {
     try {
+      const fs = await import('fs')
       const domainDoc = await req.payload.findByID({
         collection: 'domain',
         id: typeof doc.domain === 'object' ? doc.domain.id : doc.domain,
