@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "payload-cms": {
+      "command": "npx",
+      "args": ["payload-mcp"],
+      "description": "Exposes Payload CMS collections including pages, media, and layout blocks to the agent."
+    }
+  }
+}

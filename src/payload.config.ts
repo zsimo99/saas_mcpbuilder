@@ -7,6 +7,11 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Domains } from './collections/Domain'
+import { Pages } from './collections/Pages'
+import { Headers } from './collections/Header'
+
+import { mcpPlugin } from '@payloadcms/plugin-mcp'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -18,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Domains, Pages, Headers],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -30,5 +35,26 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    mcpPlugin({
+      collections: {
+        pages: {
+          enabled: {
+            find: true,
+            create: true,  // Allow the agent to create pages
+            update: true,
+          },
+          description: 'Collection for landing pages. Contains a structural blocks layout field.',
+        },
+        media: {
+          enabled: {
+            find: true,
+            create: true,  // Allow the agent to upload assets if needed
+          },
+          description: 'Uploaded images, assets, and graphics used inside page blocks.',
+        },
+      },
+    }),
+  ],
 })
+

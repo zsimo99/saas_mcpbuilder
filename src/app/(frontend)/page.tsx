@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url'
 
 import config from '@/payload.config'
 import './styles.css'
+import HeroBlockComponent from '@/blocks/hero/component'
+import { RenderBlocks } from '@/blocks/RenderBlocks'
 
 export default async function HomePage() {
   const headers = await getHeaders()
@@ -13,47 +15,39 @@ export default async function HomePage() {
   const payload = await getPayload({ config: payloadConfig })
   const { user } = await payload.auth({ headers })
 
-  const fileURL = `vscode://file/${fileURLToPath(import.meta.url)}`
-
+  // const fileURL = `vscode://file/${fileURLToPath(import.meta.url)}`
+  const host = headers.get('host')
+  const domainData = await payload.find({
+    collection: 'domain',
+    where: {
+      domain: {
+        equals: host,
+      }
+    }
+  })
+  if(domainData.docs.length === 0){
+    return <div>404</div>
+  }
+  // get page data 
+  const pageData= await payload.find({
+    collection: "pages",
+    where:{
+      domain:{
+        equals:domainData.docs[0].id
+      },
+      slug:{
+        equals:"home"
+      }
+    }
+  })
+  if(pageData.docs.length === 0){
+    return <div>there is no home page for this domain 
+    {domainData.docs[0].domain}
+    </div>
+  }
   return (
-    <div className="home">
-      <div className="content">
-        <picture>
-          <source srcSet="https://raw.githubusercontent.com/payloadcms/payload/3.x/packages/ui/src/assets/payload-favicon.svg" />
-          <Image
-            alt="Payload Logo"
-            height={65}
-            src="https://raw.githubusercontent.com/payloadcms/payload/3.x/packages/ui/src/assets/payload-favicon.svg"
-            width={65}
-          />
-        </picture>
-        {!user && <h1>Welcome to your new project.</h1>}
-        {user && <h1>Welcome back, {user.email}</h1>}
-        <div className="links">
-          <a
-            className="admin"
-            href={payloadConfig.routes.admin}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Go to admin panel
-          </a>
-          <a
-            className="docs"
-            href="https://payloadcms.com/docs"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Documentation
-          </a>
-        </div>
-      </div>
-      <div className="footer">
-        <p>Update this page by editing</p>
-        <a className="codeLink" href={fileURL}>
-          <code>app/(frontend)/page.tsx</code>
-        </a>
-      </div>
+    <div>
+      <RenderBlocks blocks={pageData.docs[0].layout} />
     </div>
   )
 }
