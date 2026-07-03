@@ -341,7 +341,7 @@ export interface PayloadMcpApiKey {
     /**
      * Upload a local media file to Payload CMS for a specific domain.
      */
-    createMedia?: boolean | null;
+    uploadMedia?: boolean | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -600,7 +600,7 @@ export interface PayloadMcpApiKeysSelect<T extends boolean = true> {
   'payload-mcp-tool'?:
     | T
     | {
-        createMedia?: T;
+        uploadMedia?: T;
       };
   updatedAt?: T;
   createdAt?: T;

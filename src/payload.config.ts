@@ -75,7 +75,7 @@ export default buildConfig({
       mcp: {
         tools: [
           {
-            name: 'createMedia',
+            name: 'uploadMedia',
             description: 'Upload a local media file to Payload CMS for a specific domain.',
             parameters: {
               domain: z.union([z.number(), z.string()]),
@@ -129,7 +129,7 @@ export default buildConfig({
                   ],
                 }
               } catch (error: any) {
-                console.error('Error in custom createMedia tool:', error);
+                console.error('Error in custom uploadMedia tool:', error);
                 return {
                   content: [
                     {
