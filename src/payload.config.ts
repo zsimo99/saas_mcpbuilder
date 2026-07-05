@@ -18,6 +18,11 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
+  upload: {
+
+    useTempFiles: true,
+    tempFileDir: '/tmp', // Ensures Vercel's writable zone is utilized
+  },
   admin: {
     user: Users.slug,
     importMap: {
@@ -90,7 +95,7 @@ export default buildConfig({
                 const filePath = args.filePath as string
 
                 const absolutePath = path.resolve(filePath);
-                
+
                 // Check if file exists
                 if (!fs.existsSync(absolutePath)) {
                   return {
