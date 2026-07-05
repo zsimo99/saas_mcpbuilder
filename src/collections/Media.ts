@@ -4,10 +4,6 @@ import { hasDomainAccess } from './Domain'
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3Client, getBucketName } from '@/utilities/s3'
 import path from 'path'
-import { fileURLToPath } from 'url'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
 
 const uploadToS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
   if (doc && doc.domain && doc.filename && req.payload) {
@@ -16,36 +12,24 @@ const uploadToS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
       const domainDoc = await req.payload.findByID({
         collection: 'domain',
         id: typeof doc.domain === 'object' ? doc.domain.id : doc.domain,
+        req,
       })
       if (domainDoc && typeof domainDoc === 'object' && 'slug' in domainDoc && domainDoc.slug) {
         const bucketName = getBucketName(domainDoc.slug)
-        const endpoint = process.env.S3_ENDPOINT || 'https://s3.amazonaws.com'
-        const s3Url = `${endpoint}/${bucketName}/${doc.filename}`
+        const filePath = path.resolve(process.cwd(), 'media', doc.filename)
 
-        if (doc.url !== s3Url) {
-          const filePath = path.resolve(dirname, '../../media', doc.filename)
-          if (fs.existsSync(filePath)) {
-            const fileBuffer = fs.readFileSync(filePath)
-            await s3Client.send(new PutObjectCommand({
-              Bucket: bucketName,
-              Key: doc.filename,
-              Body: fileBuffer,
-              ContentType: doc.mimeType || undefined,
-            }))
-            console.log(`Successfully uploaded file ${doc.filename} to S3 bucket ${bucketName}`)
+        if (fs.existsSync(filePath)) {
+          const fileBuffer = fs.readFileSync(filePath)
+          await s3Client.send(new PutObjectCommand({
+            Bucket: bucketName,
+            Key: doc.filename,
+            Body: fileBuffer,
+            ContentType: doc.mimeType || undefined,
+          }))
+          console.log(`Successfully uploaded file ${doc.filename} to S3 bucket ${bucketName}`)
 
-            await req.payload.update({
-              collection: 'media',
-              id: doc.id,
-              data: {
-                url: s3Url,
-              },
-              overrideAccess: true,
-            })
-
-            fs.unlinkSync(filePath)
-            console.log(`Successfully deleted local copy of ${doc.filename}`)
-          }
+          fs.unlinkSync(filePath)
+          console.log(`Successfully deleted local copy of ${doc.filename}`)
         }
       }
     } catch (error) {
@@ -60,6 +44,7 @@ const deleteFromS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
       const domainDoc = await req.payload.findByID({
         collection: 'domain',
         id: typeof doc.domain === 'object' ? doc.domain.id : doc.domain,
+        req,
       })
       if (domainDoc && typeof domainDoc === 'object' && 'slug' in domainDoc && domainDoc.slug) {
         const bucketName = getBucketName(domainDoc.slug)
@@ -73,6 +58,26 @@ const deleteFromS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
       console.error('Error deleting file from S3:', error)
     }
   }
+}
+
+const resolveS3Url = async ({ doc, req }: { doc: any, req: any }) => {
+  if (doc && doc.domain && doc.filename && req.payload) {
+    try {
+      const domainDoc = await req.payload.findByID({
+        collection: 'domain',
+        id: typeof doc.domain === 'object' ? doc.domain.id : doc.domain,
+        req,
+      })
+      if (domainDoc && typeof domainDoc === 'object' && 'slug' in domainDoc && domainDoc.slug) {
+        const bucketName = getBucketName(domainDoc.slug)
+        const endpoint = process.env.S3_ENDPOINT || 'https://s3.amazonaws.com'
+        doc.url = `${endpoint}/${bucketName}/${doc.filename}`
+      }
+    } catch (error) {
+      console.error('Error resolving S3 URL in afterRead hook:', error)
+    }
+  }
+  return doc
 }
 
 const hasMediaAccess: Access = ({ req }) => {
@@ -114,6 +119,7 @@ export const Media: CollectionConfig = {
   hooks: {
     afterChange: [uploadToS3Bucket],
     afterDelete: [deleteFromS3Bucket],
+    afterRead: [resolveS3Url],
   },
   fields: [
     {
@@ -129,6 +135,19 @@ export const Media: CollectionConfig = {
       
     },
   ],
-  upload: true,
+  upload: {
+    formatOptions: {
+      format: 'webp',
+      options: {
+        quality: 75,
+      },
+    },
+    resizeOptions: {
+      width: 1920,
+      height: 1080,
+      fit: 'inside',
+      withoutEnlargement: true,
+    },
+  },
 
 }
