@@ -4,6 +4,9 @@ import { hasDomainAccess } from './Domain'
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { s3Client, getBucketName } from '@/utilities/s3'
 import path from 'path'
+import os from 'os'
+
+const staticDir = path.resolve(os.tmpdir(), 'media')
 
 const uploadToS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
   if (doc && doc.domain && doc.filename && req.payload) {
@@ -16,7 +19,7 @@ const uploadToS3Bucket = async ({ doc, req }: { doc: any, req: any }) => {
       })
       if (domainDoc && typeof domainDoc === 'object' && 'slug' in domainDoc && domainDoc.slug) {
         const bucketName = getBucketName(domainDoc.slug)
-        const filePath = path.resolve(process.cwd(), 'media', doc.filename)
+        const filePath = path.resolve(staticDir, doc.filename)
 
         if (fs.existsSync(filePath)) {
           const fileBuffer = fs.readFileSync(filePath)
@@ -136,6 +139,7 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
+    staticDir,
     formatOptions: {
       format: 'webp',
       options: {

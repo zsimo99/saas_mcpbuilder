@@ -5,6 +5,7 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import os from 'os'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
@@ -19,9 +20,8 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   upload: {
-
     useTempFiles: true,
-    tempFileDir: '/tmp', // Ensures Vercel's writable zone is utilized
+    tempFileDir: os.tmpdir(), // Ensures Vercel's or system's writable zone is utilized
   },
   admin: {
     user: Users.slug,
