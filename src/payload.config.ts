@@ -76,133 +76,133 @@ export default buildConfig({
           description: 'Uploaded images, assets, and graphics used inside page blocks.',
         },
       },
-      mcp: {
-        tools: [
-          {
-            name: 'uploadMedia',
-            description: 'Upload a media file to Payload CMS for a specific domain. Supports local file paths and base64-encoded data.',
-            parameters: {
-              domain: z.union([z.number(), z.string()]),
-              alt: z.string(),
-              filePath: z.string().optional().describe('Local file path (if running locally)'),
-              base64Data: z.string().optional().describe('Base64-encoded file content (required for remote/cloud agents like ChatGPT)'),
-              filename: z.string().optional().describe('The filename with extension (required if base64Data is provided)'),
-            } as any,
-            handler: async (args, req) => {
-              const fs = await import('fs')
-              const os = await import('os')
-              let tempFilePath: string | null = null
-              try {
-                const domainInput = args.domain
-                const domain = typeof domainInput === 'string' ? parseInt(domainInput, 10) : (domainInput as number)
-                const alt = args.alt as string
-                const filename = args.filename as string | undefined
-                const filePath = args.filePath as string | undefined
-                const base64Data = args.base64Data as string | undefined
+      // mcp: {
+      //   tools: [
+      //     {
+      //       name: 'uploadMedia',
+      //       description: 'Upload a media file to Payload CMS for a specific domain. Supports local file paths and base64-encoded data.',
+      //       parameters: {
+      //         domain: z.union([z.number(), z.string()]),
+      //         alt: z.string(),
+      //         filePath: z.string().optional().describe('Local file path (if running locally)'),
+      //         base64Data: z.string().optional().describe('Base64-encoded file content (required for remote/cloud agents like ChatGPT)'),
+      //         filename: z.string().optional().describe('The filename with extension (required if base64Data is provided)'),
+      //       } as any,
+      //       handler: async (args, req) => {
+      //         const fs = await import('fs')
+      //         const os = await import('os')
+      //         let tempFilePath: string | null = null
+      //         try {
+      //           const domainInput = args.domain
+      //           const domain = typeof domainInput === 'string' ? parseInt(domainInput, 10) : (domainInput as number)
+      //           const alt = args.alt as string
+      //           const filename = args.filename as string | undefined
+      //           const filePath = args.filePath as string | undefined
+      //           const base64Data = args.base64Data as string | undefined
 
-                let absolutePath: string
+      //           let absolutePath: string
 
-                if (base64Data) {
-                  if (!filename) {
-                    return {
-                      content: [
-                        {
-                          type: 'text',
-                          text: JSON.stringify({
-                            success: false,
-                            error: 'filename is required when uploading using base64Data.',
-                          }),
-                        },
-                      ],
-                    }
-                  }
-                  // Decode base64 and write to a temporary file
-                  const buffer = Buffer.from(base64Data, 'base64')
-                  const tempDir = os.tmpdir()
-                  tempFilePath = path.resolve(tempDir, `mcp-upload-${Date.now()}-${filename}`)
-                  fs.writeFileSync(tempFilePath, buffer)
-                  absolutePath = tempFilePath
-                } else if (filePath) {
-                  absolutePath = path.resolve(filePath);
+      //           if (base64Data) {
+      //             if (!filename) {
+      //               return {
+      //                 content: [
+      //                   {
+      //                     type: 'text',
+      //                     text: JSON.stringify({
+      //                       success: false,
+      //                       error: 'filename is required when uploading using base64Data.',
+      //                     }),
+      //                   },
+      //                 ],
+      //               }
+      //             }
+      //             // Decode base64 and write to a temporary file
+      //             const buffer = Buffer.from(base64Data, 'base64')
+      //             const tempDir = os.tmpdir()
+      //             tempFilePath = path.resolve(tempDir, `mcp-upload-${Date.now()}-${filename}`)
+      //             fs.writeFileSync(tempFilePath, buffer)
+      //             absolutePath = tempFilePath
+      //           } else if (filePath) {
+      //             absolutePath = path.resolve(filePath);
 
-                  // Check if file exists
-                  if (!fs.existsSync(absolutePath)) {
-                    return {
-                      content: [
-                        {
-                          type: 'text',
-                          text: JSON.stringify({
-                            success: false,
-                            error: `File not found at path: ${filePath}`,
-                          }),
-                        },
-                      ],
-                    }
-                  }
-                } else {
-                  return {
-                    content: [
-                      {
-                        type: 'text',
-                        text: JSON.stringify({
-                          success: false,
-                          error: 'Either filePath or base64Data (along with filename) must be provided.',
-                        }),
-                      },
-                    ],
-                  }
-                }
+      //             // Check if file exists
+      //             if (!fs.existsSync(absolutePath)) {
+      //               return {
+      //                 content: [
+      //                   {
+      //                     type: 'text',
+      //                     text: JSON.stringify({
+      //                       success: false,
+      //                       error: `File not found at path: ${filePath}`,
+      //                     }),
+      //                   },
+      //                 ],
+      //               }
+      //             }
+      //           } else {
+      //             return {
+      //               content: [
+      //                 {
+      //                   type: 'text',
+      //                   text: JSON.stringify({
+      //                     success: false,
+      //                     error: 'Either filePath or base64Data (along with filename) must be provided.',
+      //                   }),
+      //                 },
+      //               ],
+      //             }
+      //           }
 
-                // Create the media using the Local API
-                const result = await req.payload.create({
-                  collection: 'media',
-                  data: {
-                    alt,
-                    domain,
-                  },
-                  filePath: absolutePath,
-                });
+      //           // Create the media using the Local API
+      //           const result = await req.payload.create({
+      //             collection: 'media',
+      //             data: {
+      //               alt,
+      //               domain,
+      //             },
+      //             filePath: absolutePath,
+      //           });
 
-                // Clean up the temp file if one was created
-                if (tempFilePath && fs.existsSync(tempFilePath)) {
-                  fs.unlinkSync(tempFilePath)
-                }
+      //           // Clean up the temp file if one was created
+      //           if (tempFilePath && fs.existsSync(tempFilePath)) {
+      //             fs.unlinkSync(tempFilePath)
+      //           }
 
-                return {
-                  content: [
-                    {
-                      type: 'text',
-                      text: JSON.stringify({
-                        success: true,
-                        message: 'Media successfully uploaded.',
-                        media: result,
-                      }),
-                    },
-                  ],
-                }
-              } catch (error: any) {
-                console.error('Error in custom uploadMedia tool:', error);
-                if (tempFilePath && fs.existsSync(tempFilePath)) {
-                  try {
-                    fs.unlinkSync(tempFilePath)
-                  } catch (_) {}
-                }
-                return {
-                  content: [
-                    {
-                      type: 'text',
-                      text: JSON.stringify({
-                        success: false,
-                        error: error.message || 'An unexpected error occurred during upload.',
-                      }),
-                    },
-                  ],
-                }
-              }
-            },
-          },
-        ],
-      },
+      //           return {
+      //             content: [
+      //               {
+      //                 type: 'text',
+      //                 text: JSON.stringify({
+      //                   success: true,
+      //                   message: 'Media successfully uploaded.',
+      //                   media: result,
+      //                 }),
+      //               },
+      //             ],
+      //           }
+      //         } catch (error: any) {
+      //           console.error('Error in custom uploadMedia tool:', error);
+      //           if (tempFilePath && fs.existsSync(tempFilePath)) {
+      //             try {
+      //               fs.unlinkSync(tempFilePath)
+      //             } catch (_) {}
+      //           }
+      //           return {
+      //             content: [
+      //               {
+      //                 type: 'text',
+      //                 text: JSON.stringify({
+      //                   success: false,
+      //                   error: error.message || 'An unexpected error occurred during upload.',
+      //                 }),
+      //               },
+      //             ],
+      //           }
+      //         }
+      //       },
+      //     },
+      //   ],
+      // },
       overrideAuth: async (req, getDefaultMcpAccessSettings) => {
         console.log("req", req)
         const url = new URL(req.url || '', 'http://localhost')
