@@ -185,7 +185,7 @@ export default buildConfig({
       //           if (tempFilePath && fs.existsSync(tempFilePath)) {
       //             try {
       //               fs.unlinkSync(tempFilePath)
-      //             } catch (_) {}
+      //             } catch (_) { }
       //           }
       //           return {
       //             content: [

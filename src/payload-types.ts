@@ -337,12 +337,6 @@ export interface PayloadMcpApiKey {
      */
     create?: boolean | null;
   };
-  'payload-mcp-tool'?: {
-    /**
-     * Upload a media file to Payload CMS for a specific domain. Supports local file paths and base64-encoded data.
-     */
-    uploadMedia?: boolean | null;
-  };
   updatedAt: string;
   createdAt: string;
   enableAPIKey?: boolean | null;
@@ -596,11 +590,6 @@ export interface PayloadMcpApiKeysSelect<T extends boolean = true> {
     | {
         find?: T;
         create?: T;
-      };
-  'payload-mcp-tool'?:
-    | T
-    | {
-        uploadMedia?: T;
       };
   updatedAt?: T;
   createdAt?: T;
