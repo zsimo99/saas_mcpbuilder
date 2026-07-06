@@ -80,31 +80,73 @@ export default buildConfig({
         tools: [
           {
             name: 'uploadMedia',
-            description: 'Upload a local media file to Payload CMS for a specific domain.',
+            description: 'Upload a media file to Payload CMS for a specific domain. Supports local file paths and base64-encoded data.',
             parameters: {
               domain: z.union([z.number(), z.string()]),
               alt: z.string(),
-              filePath: z.string(),
+              filePath: z.string().optional().describe('Local file path (if running locally)'),
+              base64Data: z.string().optional().describe('Base64-encoded file content (required for remote/cloud agents like ChatGPT)'),
+              filename: z.string().optional().describe('The filename with extension (required if base64Data is provided)'),
             } as any,
             handler: async (args, req) => {
               const fs = await import('fs')
+              const os = await import('os')
+              let tempFilePath: string | null = null
               try {
                 const domainInput = args.domain
                 const domain = typeof domainInput === 'string' ? parseInt(domainInput, 10) : (domainInput as number)
                 const alt = args.alt as string
-                const filePath = args.filePath as string
+                const filename = args.filename as string | undefined
+                const filePath = args.filePath as string | undefined
+                const base64Data = args.base64Data as string | undefined
 
-                const absolutePath = path.resolve(filePath);
+                let absolutePath: string
 
-                // Check if file exists
-                if (!fs.existsSync(absolutePath)) {
+                if (base64Data) {
+                  if (!filename) {
+                    return {
+                      content: [
+                        {
+                          type: 'text',
+                          text: JSON.stringify({
+                            success: false,
+                            error: 'filename is required when uploading using base64Data.',
+                          }),
+                        },
+                      ],
+                    }
+                  }
+                  // Decode base64 and write to a temporary file
+                  const buffer = Buffer.from(base64Data, 'base64')
+                  const tempDir = os.tmpdir()
+                  tempFilePath = path.resolve(tempDir, `mcp-upload-${Date.now()}-${filename}`)
+                  fs.writeFileSync(tempFilePath, buffer)
+                  absolutePath = tempFilePath
+                } else if (filePath) {
+                  absolutePath = path.resolve(filePath);
+
+                  // Check if file exists
+                  if (!fs.existsSync(absolutePath)) {
+                    return {
+                      content: [
+                        {
+                          type: 'text',
+                          text: JSON.stringify({
+                            success: false,
+                            error: `File not found at path: ${filePath}`,
+                          }),
+                        },
+                      ],
+                    }
+                  }
+                } else {
                   return {
                     content: [
                       {
                         type: 'text',
                         text: JSON.stringify({
                           success: false,
-                          error: `File not found at path: ${filePath}`,
+                          error: 'Either filePath or base64Data (along with filename) must be provided.',
                         }),
                       },
                     ],
@@ -121,6 +163,11 @@ export default buildConfig({
                   filePath: absolutePath,
                 });
 
+                // Clean up the temp file if one was created
+                if (tempFilePath && fs.existsSync(tempFilePath)) {
+                  fs.unlinkSync(tempFilePath)
+                }
+
                 return {
                   content: [
                     {
@@ -135,6 +182,11 @@ export default buildConfig({
                 }
               } catch (error: any) {
                 console.error('Error in custom uploadMedia tool:', error);
+                if (tempFilePath && fs.existsSync(tempFilePath)) {
+                  try {
+                    fs.unlinkSync(tempFilePath)
+                  } catch (_) {}
+                }
                 return {
                   content: [
                     {
